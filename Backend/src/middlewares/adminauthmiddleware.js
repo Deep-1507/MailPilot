@@ -9,11 +9,11 @@ const adminauthMiddleware = (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    console.log(token)
+    // console.log(token)
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        console.log("Decoded Token:", decoded);
+        // console.log("Decoded Token:", decoded);
 
         if (!decoded.id) {
             return res.status(403).json({ message: "Invalid token: User ID missing" });

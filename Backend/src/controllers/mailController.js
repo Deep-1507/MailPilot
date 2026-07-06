@@ -6,7 +6,7 @@ import { connectMailbox, disconnectMailbox } from "../services/imapService.js";
  */
 export const connectMail = async (req, res) => {
   try {
-    const { userId, credId } = req.body;
+    const { userId, credId, page = 1, limit = 50 } = req.body;
 
     if (!userId || !credId) {
       return res.status(400).json({
@@ -19,7 +19,7 @@ export const connectMail = async (req, res) => {
 
     console.log("Before connectMailbox");
 
-    const emails = await connectMailbox(userId, credId, (mail) => {
+    const emails = await connectMailbox(userId, credId, page, limit, (mail) => {
       io.to(userId).emit("new-mail", mail);
     });
 

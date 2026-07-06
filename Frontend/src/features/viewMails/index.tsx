@@ -3,6 +3,7 @@ import { Main } from "@/components/layout/main";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 import {
     Form,
@@ -76,11 +77,14 @@ export default function ViewMails() {
     const hasFetched = useRef(false);
 
     const socketRef = useRef<Socket | null>(null);
+
     const [credentials, setCredentials] = useState<Credential[]>([]);
 
     const [emails, setEmails] = useState<Mail[]>([]);
 
     const [selectedMail, setSelectedMail] = useState<Mail | null>(null);
+
+    const [hasLoadedInbox, setHasLoadedInbox] = useState(false);
 
     const [open, setOpen] = useState(false);
 
@@ -91,6 +95,14 @@ export default function ViewMails() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     const userId = user.id;
+
+    const [page, setPage] = useState(1);
+
+    const [hasMore, setHasMore] = useState(true);
+
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+    const loaderRef = useRef<HTMLDivElement | null>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -161,6 +173,58 @@ export default function ViewMails() {
         };
     }, []);
 
+    useEffect(() => {
+        if (!hasLoadedInbox) return;
+
+
+        const observer = new IntersectionObserver(
+
+            entries => {
+
+                if (
+
+                    entries[0].isIntersecting &&
+
+                    hasMore &&
+
+                    !isFetchingMore
+
+                ) {
+
+                    loadMoreMails();
+
+                }
+
+            },
+
+            {
+
+                threshold: 0.5
+
+            }
+
+        );
+
+        if (loaderRef.current) {
+
+            observer.observe(loaderRef.current);
+
+        }
+
+        return () => observer.disconnect();
+
+    }, [
+
+        page,
+
+        hasMore,
+
+        isFetchingMore,
+
+        hasLoadedInbox
+
+    ]);
+
     const viewMails = async (values: z.infer<typeof formSchema>) => {
         try {
             setLoading(true);
@@ -214,6 +278,8 @@ export default function ViewMails() {
                 {
                     userId,
                     credId: values.credId,
+                    page: 1,
+                    limit: 50,
                 },
                 {
                     headers: {
@@ -222,7 +288,12 @@ export default function ViewMails() {
                 }
             );
 
+            setPage(1);
+
+            setHasMore(true);
+
             setEmails(response.data.emails || []);
+            setHasLoadedInbox(true);
 
             enqueueSnackbar("Emails Loaded Successfully", {
                 variant: "success",
@@ -255,6 +326,82 @@ export default function ViewMails() {
 
     const refreshInbox = () => {
         form.handleSubmit(viewMails)();
+    };
+
+    const loadMoreMails = async () => {
+
+        if (isFetchingMore || !hasMore) return;
+
+        try {
+
+            setIsFetchingMore(true);
+
+            const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+            const nextPage = page + 1;
+
+            const response = await axios.post(
+
+                `${BACKEND_URL}/api/mail/connect`,
+
+                {
+
+                    userId,
+
+                    credId: form.getValues("credId"),
+
+                    page: nextPage,
+
+                    limit: 50
+
+                },
+
+                {
+
+                    headers: {
+
+                        Authorization: `Bearer ${token}`
+
+                    }
+
+                }
+
+            );
+
+            const newEmails = response.data.emails || [];
+
+            if (newEmails.length === 0) {
+
+                setHasMore(false);
+
+                return;
+
+            }
+
+            setEmails(prev => [
+
+                ...prev,
+
+                ...newEmails
+
+            ]);
+
+            setPage(nextPage);
+
+        }
+
+        catch (err) {
+
+            console.log(err);
+
+        }
+
+        finally {
+
+            setIsFetchingMore(false);
+
+        }
+
     };
 
     return (
@@ -443,6 +590,17 @@ export default function ViewMails() {
                         </TableBody>
 
                     </Table>
+
+                    {emails.length > 0 && (
+                        <div
+                            ref={loaderRef}
+                            className="flex justify-center py-10"
+                        >
+                            {isFetchingMore && (
+                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                            )}
+                        </div>
+                    )}
 
                 </div>
 

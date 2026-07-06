@@ -23,7 +23,13 @@ async function getCredentials(credId) {
   }
 }
 
-export async function connectMailbox(userId, credId, onNewMail) {
+export async function connectMailbox(
+  userId,
+  credId,
+  page = 1,
+  limit = 50,
+  onNewMail,
+) {
   // Disconnect previous connection if exists
   if (clients.has(userId)) {
     try {
@@ -59,11 +65,13 @@ export async function connectMailbox(userId, credId, onNewMail) {
 
   const total = mailbox.exists;
 
-  const start = Math.max(total - 49, 1);
+  const end = total - (page - 1) * limit;
+
+  const start = Math.max(end - limit + 1, 1);
 
   const emails = [];
 
-  for await (const msg of client.fetch(`${start}:*`, {
+  for await (const msg of client.fetch(`${start}:${end}`, {
     uid: true,
     source: true,
     internalDate: true,
@@ -93,7 +101,7 @@ export async function connectMailbox(userId, credId, onNewMail) {
   // Listen for new mails
   // -------------------------
 
-  client.on("exists", async ({path,count,prevCount}) => {
+  client.on("exists", async ({ path, count, prevCount }) => {
     try {
       //   const mailbox = await client.mailboxOpen("INBOX");
 
