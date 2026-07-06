@@ -2,7 +2,6 @@ import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
-
 import { Button } from "@/components/ui/button";
 
 import {
@@ -39,21 +38,13 @@ import {
 } from "@/components/ui/dialog";
 
 import { Badge } from "@/components/ui/badge";
-
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import { useSnackbar } from "notistack";
-
 import axios from "axios";
-
 import { useEffect, useRef, useState } from "react";
-
 import { useForm } from "react-hook-form";
-
 import { z } from "zod";
-
 import { useRouter } from "@tanstack/react-router";
-
 import { io, Socket } from "socket.io-client";
 
 const formSchema = z.object({
@@ -97,9 +88,9 @@ export default function ViewMails() {
 
     const token = localStorage.getItem("token");
 
-            const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-            const userId = user.id;
+    const userId = user.id;
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -198,6 +189,11 @@ export default function ViewMails() {
 
                 socketRef.current.on("connect", () => {
                     console.log("Socket Connected");
+                    socketRef.current?.emit("join", userId);
+                });
+
+                socketRef.current.on("connect_error", (err) => {
+                    console.log(err);
                 });
 
                 socketRef.current.on("disconnect", () => {

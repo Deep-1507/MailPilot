@@ -34,8 +34,6 @@ export async function connectMailbox(userId, credId, onNewMail) {
 
   const { email, password } = await getCredentials(credId);
 
-  
-
   const client = new ImapFlow({
     host: "imap.gmail.com",
     port: 993,
@@ -53,53 +51,53 @@ export async function connectMailbox(userId, credId, onNewMail) {
 
   const mailbox = await client.mailboxOpen("INBOX");
 
-clients.set(userId, client);
- 
+  clients.set(userId, client);
+
   // -------------------------
   // Fetch Existing Emails
   // -------------------------
 
- const total = mailbox.exists;
+  const total = mailbox.exists;
 
-const start = Math.max(total - 49, 1);
+  const start = Math.max(total - 49, 1);
 
-const emails = [];
+  const emails = [];
 
-for await (const msg of client.fetch(`${start}:*`, {
-  uid: true,
-  source: true,
-  internalDate: true,
-})) {
-  const parsed = await simpleParser(msg.source);
+  for await (const msg of client.fetch(`${start}:*`, {
+    uid: true,
+    source: true,
+    internalDate: true,
+  })) {
+    const parsed = await simpleParser(msg.source);
 
-  emails.unshift({
-    uid: msg.uid,
-    from: parsed.from?.text || "",
-    to: parsed.to?.text || "",
-    subject: parsed.subject || "",
-    text: parsed.text || "",
-    html: parsed.html || "",
-    date: parsed.date,
-    attachments:
-      parsed.attachments?.map((a) => ({
-        filename: a.filename,
-        size: a.size,
-        type: a.contentType,
-      })) || [],
-  });
-}
+    emails.unshift({
+      uid: msg.uid,
+      from: parsed.from?.text || "",
+      to: parsed.to?.text || "",
+      subject: parsed.subject || "",
+      text: parsed.text || "",
+      html: parsed.html || "",
+      date: parsed.date,
+      attachments:
+        parsed.attachments?.map((a) => ({
+          filename: a.filename,
+          size: a.size,
+          type: a.contentType,
+        })) || [],
+    });
+  }
 
-console.log("Fetched", emails.length, "emails");
+  console.log("Fetched", emails.length, "emails");
 
   // -------------------------
   // Listen for new mails
   // -------------------------
 
-  client.on("exists", async () => {
+  client.on("exists", async ({path,count,prevCount}) => {
     try {
-    //   const mailbox = await client.mailboxOpen("INBOX");
+      //   const mailbox = await client.mailboxOpen("INBOX");
 
-      const uid = mailbox.exists;
+      const uid = client.mailbox.exists;
 
       const message = await client.fetchOne(uid, {
         uid: true,
@@ -107,8 +105,8 @@ console.log("Fetched", emails.length, "emails");
       });
 
       if (!message) {
-  return;
-}
+        return;
+      }
 
       const parsed = await simpleParser(message.source);
 
@@ -128,7 +126,7 @@ console.log("Fetched", emails.length, "emails");
           })) || [],
       };
 
-      console.log(mail)
+      console.log(mail);
 
       if (onNewMail) {
         onNewMail(mail);
